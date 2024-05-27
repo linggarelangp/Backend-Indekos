@@ -1,12 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  casing   = "snake-case"
 }
 
 datasource db {
@@ -14,37 +7,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Roles {
+model RoomFacilities {
   id        Int      @id @default(autoincrement())
-  name      String
-  createdAt DateTime @db.Timestamp()
-  updatedAt DateTime @db.Timestamp()
+  name      String   @db.VarChar(20)
+  createdAt DateTime @db.Timestamp(0)
+  updatedAt DateTime @db.Timestamp(0)
+
+  @@map("room_facilities")
 }
 
-model Users {
+model roles {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @db.Timestamp(0)
+  updatedAt DateTime @db.Timestamp(0)
+}
+
+model roomdetails {
+  id              Int      @id @default(autoincrement())
+  roomId          Int
+  facilitiyRoomId Int
+  createdAt       DateTime @db.Timestamp(0)
+  updatedAt       DateTime @db.Timestamp(0)
+}
+
+model rooms {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(20)
+  amount    Int
+  image     String   @db.Text
+  createdAt DateTime @db.Timestamp(0)
+  updatedAt DateTime @db.Timestamp(0)
+}
+
+model transactions {
+  id        Int      @id @default(autoincrement())
+  trxId     String   @unique(map: "Transactions_trxId_key")
+  userId    Int
+  roomId    Int
+  name      String   @db.VarChar(50)
+  email     String   @unique(map: "Transactions_email_key") @db.VarChar(50)
+  status    Boolean
+  roomName  String   @db.VarChar(20)
+  amount    Int
+  price     Int
+  createdAt DateTime @db.Timestamp(0)
+  updatedAt DateTime @db.Timestamp(0)
+}
+
+model users {
   id        Int      @id @default(autoincrement())
   roleId    Int      @default(3)
-  email     String   @unique @db.VarChar(50)
+  email     String   @unique(map: "Users_email_key") @db.VarChar(50)
   name      String   @db.VarChar(50)
   password  String   @db.Text
   status    Boolean  @default(true)
-  createdAt DateTime @db.Timestamp()
-  updatedAt DateTime @db.Timestamp()
-}
-
-model Rooms {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(20)
-  createdAt DateTime @db.Timestamp()
-  updatedAt DateTime @db.Timestamp()
-}
-
-model Transactions {
-  id        Int      @id @default(autoincrement())
-  trxId     String   @unique @default(uuid())
-  name      String   @db.VarChar(50)
-  email     String   @unique @db.VarChar(50)
-  status    Boolean
-  createdAt DateTime @db.Timestamp()
-  updatedAt DateTime @db.Timestamp()
+  createdAt DateTime @db.Timestamp(0)
+  updatedAt DateTime @db.Timestamp(0)
 }

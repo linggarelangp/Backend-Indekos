@@ -2,17 +2,35 @@ import { type Request, type Response } from 'express'
 
 import prisma from '../database/prisma/prisma'
 import { Users, AddUser } from '../database/types/users'
+import { compare, hashing } from '../utils/hash'
+import { emitWarning } from 'process'
 
 export const add = async (req: Request, res: Response): Promise<Response> => {
     const { ...body } = req.body
 
     try {
+        const email: Users | null = await prisma.users.findUnique({ where: { email: body.email } })
+
+        if (email !== null) {
+            return res.status(400).json({
+                status: 400,
+                message: 'Bad Request',
+                data: [
+                    {
+                        'path': 'email',
+                        'message': 'Email address has already taken'
+                    }
+                ]
+            })
+        }
+
+        const passwordHashed: string = await hashing(body.password)
 
         const data: AddUser = {
             roleId: body.roleId ?? 3,
             email: body.email,
             name: body.name,
-            password: body.password,
+            password: passwordHashed,
             status: body.status ?? true,
             createdAt: new Date(new Date().toISOString()),
             updatedAt: new Date(new Date().toISOString())
@@ -134,6 +152,50 @@ export const deleted = async (req: Request, res: Response): Promise<Response> =>
         return res.status(200).json({
             status: 200,
             message: 'OK'
+        })
+    } catch (err: any) {
+        return res.status(500).json({
+            status: 500,
+            message: 'Internal Server Error'
+        })
+    }
+}
+
+export const login = async (req: Request, res: Response): Promise<Response> => {
+    const { ...body } = req.body
+
+    try {
+        const user: Users | null = await prisma.users.findUnique({ where: { email: body.email } })
+
+        if (user === null) {
+            return res.status(400).json({
+                status: 404,
+                message: 'Not Found'
+            })
+        }
+
+        const passwordCompare: boolean = await compare(body.password, user.password)
+
+        if (!passwordCompare) {
+            return res.status(400).json({
+                status: 404,
+                message: 'Not Found'
+            })
+        }
+
+        const data: object = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            status: user.status,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'OK',
+            data: data
         })
     } catch (err: any) {
         return res.status(500).json({
