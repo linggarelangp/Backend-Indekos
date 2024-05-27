@@ -3,7 +3,6 @@ import { type Request, type Response } from 'express'
 import prisma from '../database/prisma/prisma'
 import { Users, AddUser } from '../database/types/users'
 import { compare, hashing } from '../utils/hash'
-import { emitWarning } from 'process'
 
 export const add = async (req: Request, res: Response): Promise<Response> => {
     const { ...body } = req.body
