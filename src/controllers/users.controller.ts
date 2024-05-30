@@ -1,8 +1,9 @@
 import { type Request, type Response } from 'express'
 
 import prisma from '../database/prisma/prisma'
-import { Users, AddUser } from '../database/types/users'
+import { Users, AddUser, UserToken, GetUser } from '../database/types/users'
 import { compare, hashing } from '../utils/hash'
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/token'
 
 export const add = async (req: Request, res: Response): Promise<Response> => {
     const { ...body } = req.body
@@ -26,11 +27,13 @@ export const add = async (req: Request, res: Response): Promise<Response> => {
         const passwordHashed: string = await hashing(body.password)
 
         const data: AddUser = {
-            roleId: body.roleId ?? 3,
+            roleId: Number(body.roleId ?? 3),
             email: body.email,
             name: body.name,
             password: passwordHashed,
-            status: body.status ?? true,
+            status: true,
+            accessToken: null,
+            refreshToken: null,
             createdAt: new Date(new Date().toISOString()),
             updatedAt: new Date(new Date().toISOString())
         }
@@ -52,7 +55,17 @@ export const add = async (req: Request, res: Response): Promise<Response> => {
 
 export const getAll = async (req: Request, res: Response): Promise<Response> => {
     try {
-        const user: Users[] = await prisma.users.findMany()
+        const user: GetUser[] = await prisma.users.findMany({
+            select: {
+                id: true,
+                roleId: true,
+                email: true,
+                name: true,
+                status: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        })
 
         return res.status(200).json({
             status: 200,
@@ -71,7 +84,20 @@ export const getById = async (req: Request, res: Response): Promise<Response> =>
     const id: string = req.params.id as string
 
     try {
-        const user: Users | null = await prisma.users.findUnique({ where: { id: Number(id) } })
+        const user: GetUser | null = await prisma.users.findUnique({
+            where: {
+                id: Number(id)
+            },
+            select: {
+                id: true,
+                roleId: true,
+                email: true,
+                name: true,
+                status: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        })
 
         if (user === null) {
             return res.status(404).json({
@@ -115,7 +141,6 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
         }
 
         const update = await prisma.users.update({ where: { id: user.id }, data: { ...data } })
-        console.log(update)
 
         return res.status(200).json({
             status: 200,
@@ -182,7 +207,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
             })
         }
 
-        const data: object = {
+        const data: UserToken = {
             id: user.id,
             name: user.name,
             email: user.email,
@@ -191,10 +216,103 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
             updatedAt: user.updatedAt
         }
 
+        const accessToken: string = generateAccessToken(data)
+        const refreshToken: string = generateRefreshToken(data)
+
+
+        await prisma.users.update({
+            where: { id: user.id },
+            data: {
+                accessToken: accessToken,
+                refreshToken: refreshToken
+            }
+        })
+
+        res.cookie('xyzrt', refreshToken, {
+            maxAge: 24 * 7 * 60 * 60 * 1000
+        })
+
         return res.status(200).json({
             status: 200,
             message: 'OK',
-            data: data
+            data: { ...data, accessToken }
+        })
+    } catch (err: any) {
+        return res.status(500).json({
+            status: 500,
+            message: 'Internal Server Error'
+        })
+    }
+}
+
+export const logout = async (req: Request, res: Response): Promise<Response> => {
+    const id = req.params.id
+    try {
+        const useId: number = Number(id)
+
+        const user: Users | null = await prisma.users.findUnique({ where: { id: useId } })
+
+        if (user === null) {
+            res.clearCookie('xyzrt')
+
+            return res.status(200).json({
+                status: 200,
+                message: 'OK'
+            })
+        }
+
+        await prisma.users.update({
+            where: {
+                id: user.id
+            },
+            data: {
+                accessToken: null,
+                refreshToken: null
+            }
+        })
+
+        res.clearCookie('xyzrt')
+
+        return res.status(200).json({
+            status: 200,
+            message: 'OK'
+        })
+    } catch (err: any) {
+        return res.status(500).json({
+            status: 500,
+            message: 'Internal Server Error'
+        })
+    }
+}
+
+export const refreshToken = async (req: Request, res: Response): Promise<Response> => {
+    try {
+        const refreshToken: string = req.cookies?.xyzrt ?? null
+
+        if (refreshToken === null) {
+            return res.status(401).json({
+                status: 401,
+                message: 'Unauthorized'
+            })
+        }
+
+        const verify: UserToken | null = verifyRefreshToken(refreshToken)
+
+        if (verify === null) {
+            return res.status(401).json({
+                status: 401,
+                message: 'Unauthorized'
+            })
+        }
+
+        const data: UserToken = { ...verify }
+
+        const newAccessToken: string = generateAccessToken(data)
+
+        return res.status(200).json({
+            status: 200,
+            message: 'OK',
+            data: { ...data, accessToken: newAccessToken }
         })
     } catch (err: any) {
         return res.status(500).json({

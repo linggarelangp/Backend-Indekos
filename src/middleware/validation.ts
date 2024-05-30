@@ -3,14 +3,14 @@ import multer from 'multer'
 import { type Request, type Response, type NextFunction, type RequestHandler } from 'express'
 
 import handleZodError from '../utils/handleZodError'
-import { schemaRoles, schemaRooms, schemaUsers } from '../schemas/object.schemas'
+import { schemaRoles, schemaRooms, schemaUserAdd, schemaUsers } from '../schemas/object.schemas'
 import { fileFilter, fileLimits, fileStorage } from '../utils/multer'
 
 export const roleValidation = async (req: Request, res: Response, next: NextFunction): Promise<void | Response> => {
     const { name } = req.body
 
     try {
-        await schemaRoles.parseAsync(name)
+        await schemaRoles.parseAsync({ name })
 
         next()
     } catch (err: any) {
@@ -36,11 +36,13 @@ export const userValidation = async (req: Request, res: Response, next: NextFunc
 
     try {
         const data: object = {
+            email: body.email,
             name: body.name,
-            password: body.password
+            password: body.password,
+            confirmPassword: body.password
         }
 
-        await schemaUsers.parseAsync(data)
+        await schemaUserAdd.parseAsync(data)
 
         next()
     } catch (err: any) {
@@ -64,17 +66,10 @@ export const userValidation = async (req: Request, res: Response, next: NextFunc
 const upload: RequestHandler = multer({ storage: fileStorage, fileFilter: fileFilter, limits: fileLimits }).single('image')
 
 export const roomValidation = async (req: Request, res: Response, next: NextFunction): Promise<void | Response> => {
-    const { ...body } = req.body
-
     try {
-        const data: object = {
-            name: body.name,
-            amount: body.amount
-        }
 
-        await schemaRooms.parseAsync(data)
 
-        upload(req, res, (err: any): void | Response => {
+        upload(req, res, async (err: any): Promise<void | Response> => {
             if (err instanceof multer.MulterError) {
                 return res.status(400).json({
                     status: 400,
@@ -86,6 +81,15 @@ export const roomValidation = async (req: Request, res: Response, next: NextFunc
                     message: 'An error occurred while uploading the file'
                 })
             }
+
+            const { ...body } = req.body
+
+            const data: object = {
+                name: body.name,
+                amount: body.amount
+            }
+
+            await schemaRooms.parseAsync(data)
 
             next()
         })

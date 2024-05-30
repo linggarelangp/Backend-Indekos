@@ -45,11 +45,13 @@ export const getAll = async (req: Request, res: Response): Promise<Response> => 
     try {
         const imageUrl: string = path.join(process.cwd(), 'src/assets/img/')
 
+        console.log(imageUrl);
+
+
         const room: Rooms[] = await prisma.rooms.findMany()
 
         const data: (Rooms | undefined)[] = room.map((room) => {
-            const imagePath = path.join(imageUrl, 'room.image')
-
+            const imagePath = path.join(imageUrl, room.image)
             if (fs.existsSync(imagePath)) {
 
                 const image = fs.readFileSync(imagePath, { encoding: 'base64' })
@@ -65,7 +67,6 @@ export const getAll = async (req: Request, res: Response): Promise<Response> => 
             }
         })
 
-        console.log(data)
 
         return res.status(200).json({
             status: 200,

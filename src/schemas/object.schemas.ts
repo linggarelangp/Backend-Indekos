@@ -64,6 +64,12 @@ export const schemaUserAdd: ZodType = zod.object({
     }).max(254, {
         message: 'Email characters is too long'
     }),
+    name: zod.string({
+        required_error: 'Name is required!',
+        invalid_type_error: 'Name must be a string'
+    }).max(50, {
+        message: 'Name must be less than 50 characters'
+    }),
     password: zod.string({
         required_error: 'Password is required!',
         invalid_type_error: 'Email must be a string'
@@ -71,8 +77,8 @@ export const schemaUserAdd: ZodType = zod.object({
         message: 'Password must be 8 or more characters long'
     }),
     confirmPassword: zod.string({
-        required_error: 'Password is required!',
-        invalid_type_error: 'Email must be a string'
+        required_error: 'Confirm Password is required!',
+        invalid_type_error: 'Confirm Password must be a string'
     }).min(8, {
         message: 'Password must be 8 or more characters long'
     })

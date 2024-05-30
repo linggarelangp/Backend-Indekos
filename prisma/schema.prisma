@@ -56,12 +56,14 @@ model transactions {
 }
 
 model users {
-  id        Int      @id @default(autoincrement())
-  roleId    Int      @default(3)
-  email     String   @unique(map: "Users_email_key") @db.VarChar(50)
-  name      String   @db.VarChar(50)
-  password  String   @db.Text
-  status    Boolean  @default(true)
-  createdAt DateTime @db.Timestamp(0)
-  updatedAt DateTime @db.Timestamp(0)
+  id           Int      @id @default(autoincrement())
+  roleId       Int      @default(3)
+  email        String   @unique(map: "Users_email_key") @db.VarChar(50)
+  name         String   @db.VarChar(50)
+  password     String   @db.Text
+  status       Boolean  @default(true)
+  accessToken  String?  @db.Text
+  refreshToken String?  @db.Text
+  createdAt    DateTime @db.Timestamp(0)
+  updatedAt    DateTime @db.Timestamp(0)
 }
