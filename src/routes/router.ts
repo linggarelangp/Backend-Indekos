@@ -18,8 +18,8 @@ router.use(cors({
     origin: true
 }))
 
-router.use(roles)
-router.use(users)
-router.use(rooms)
+router.use('/api', roles)
+router.use('/api', users)
+router.use('/api', rooms)
 
 export default router
