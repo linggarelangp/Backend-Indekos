@@ -3,7 +3,8 @@ import { type Request, type Response } from 'express'
 import prisma from '../database/prisma/prisma'
 import { Users, AddUser, UserToken, GetUser } from '../database/types/users'
 import { compare, hashing } from '../utils/hash'
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/token'
+import { generateAccessToken, generateRefreshToken } from '../utils/token'
+import { formatterDate, getDateNow } from '../utils/date'
 
 export const add = async (req: Request, res: Response): Promise<Response> => {
     const { ...body } = req.body
@@ -34,11 +35,13 @@ export const add = async (req: Request, res: Response): Promise<Response> => {
             status: true,
             accessToken: null,
             refreshToken: null,
-            createdAt: new Date(new Date().toISOString()),
-            updatedAt: new Date(new Date().toISOString())
+            createdAt: new Date(getDateNow()),
+            updatedAt: new Date(getDateNow())
         }
 
         const user: Users = await prisma.users.create({ data })
+
+        console.log(data);
 
         return res.status(201).json({
             status: 201,
@@ -56,22 +59,80 @@ export const add = async (req: Request, res: Response): Promise<Response> => {
 export const getAll = async (req: Request, res: Response): Promise<Response> => {
     try {
         const user: GetUser[] = await prisma.users.findMany({
+            where: {
+                roleId: 3
+            },
             select: {
                 id: true,
+                name: true,
                 roleId: true,
                 email: true,
-                name: true,
                 status: true,
                 createdAt: true,
                 updatedAt: true
+            },
+            orderBy: {
+                roleId: 'asc'
+            }
+        })
+
+        const response: object[] = user.map(user => {
+            return {
+                id: user.id,
+                name: user.name,
+                roleId: user.roleId,
+                email: user.email,
+                status: user.status,
+                createdAt: formatterDate(new Date(user.createdAt)),
+                updatedAt: formatterDate(new Date(user.updatedAt))
             }
         })
 
         return res.status(200).json({
             status: 200,
             message: 'OK',
-            data: user
+            data: response
         })
+    } catch (err: any) {
+        return res.status(500).json({
+            status: 500,
+            message: 'Internal Server Error'
+        })
+    }
+}
+
+export const getWorkers = async (req: Request, res: Response): Promise<Response> => {
+    try {
+        const workers: GetUser[] = await prisma.users.findMany({
+            where: {
+                OR: [
+                    { roleId: 1 },
+                    { roleId: 2 }
+                ]
+            },
+            orderBy: {
+                roleId: 'asc'
+            }
+        })
+
+        const response: object[] = workers.map(worker => {
+            return {
+                id: worker.id,
+                name: worker.name,
+                roleId: worker.roleId,
+                email: worker.email,
+                status: worker.status,
+                createdAt: formatterDate(new Date(worker.createdAt)),
+                updatedAt: formatterDate(new Date(worker.updatedAt))
+            }
+        })
+
+        return res.status(200).json({
+            status: 200,
+            message: 'OK',
+            data: response
+        })
+
     } catch (err: any) {
         return res.status(500).json({
             status: 500,
@@ -98,6 +159,7 @@ export const getById = async (req: Request, res: Response): Promise<Response> =>
                 updatedAt: true
             }
         })
+        console.log({ data: user })
 
         if (user === null) {
             return res.status(404).json({
@@ -122,6 +184,7 @@ export const getById = async (req: Request, res: Response): Promise<Response> =>
 export const update = async (req: Request, res: Response): Promise<Response> => {
     const { ...body } = req.body
     const id: string = req.params.id
+
     try {
         const userId: number = Number(id)
 
@@ -134,13 +197,34 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
             })
         }
 
-        const data: object = {
+        if (body.email !== user.email) {
+            const email: Users | null = await prisma.users.findUnique({ where: { email: body.email } })
+
+            if (email !== null) {
+                return res.status(400).json({
+                    status: 400,
+                    message: 'Bad Request',
+                    data: [
+                        {
+                            'path': 'email',
+                            'message': 'Email address has already taken'
+                        }
+                    ]
+                })
+            }
+        }
+
+        let data: object = {
             email: body.email,
             name: body.name,
             updatedAt: new Date(new Date().toISOString())
         }
 
-        const update = await prisma.users.update({ where: { id: user.id }, data: { ...data } })
+        if (body.roleId) {
+            data = { ...data, roleId: Number(body.roleId) }
+        }
+
+        await prisma.users.update({ where: { id: user.id }, data: { ...data } })
 
         return res.status(200).json({
             status: 200,
@@ -171,7 +255,8 @@ export const deleted = async (req: Request, res: Response): Promise<Response> =>
             })
         }
 
-        await prisma.users.delete({ where: { id: user.id } })
+        const del = await prisma.users.delete({ where: { id: user.id } })
+        console.log({ del })
 
         return res.status(200).json({
             status: 200,
@@ -192,7 +277,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
         const user: Users | null = await prisma.users.findUnique({ where: { email: body.email } })
 
         if (user === null) {
-            return res.status(400).json({
+            return res.status(404).json({
                 status: 404,
                 message: 'Not Found'
             })
@@ -201,7 +286,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
         const passwordCompare: boolean = await compare(body.password, user.password)
 
         if (!passwordCompare) {
-            return res.status(400).json({
+            return res.status(404).json({
                 status: 404,
                 message: 'Not Found'
             })
@@ -209,16 +294,16 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
 
         const data: UserToken = {
             id: user.id,
+            roleId: user.roleId,
             name: user.name,
             email: user.email,
             status: user.status,
             createdAt: user.createdAt,
-            updatedAt: user.updatedAt
+            updatedAt: user.updatedAt,
         }
 
         const accessToken: string = generateAccessToken(data)
         const refreshToken: string = generateRefreshToken(data)
-
 
         await prisma.users.update({
             where: { id: user.id },
@@ -276,43 +361,6 @@ export const logout = async (req: Request, res: Response): Promise<Response> => 
         return res.status(200).json({
             status: 200,
             message: 'OK'
-        })
-    } catch (err: any) {
-        return res.status(500).json({
-            status: 500,
-            message: 'Internal Server Error'
-        })
-    }
-}
-
-export const refreshToken = async (req: Request, res: Response): Promise<Response> => {
-    try {
-        const refreshToken: string = req.cookies?.xyzrt ?? null
-
-        if (refreshToken === null) {
-            return res.status(401).json({
-                status: 401,
-                message: 'Unauthorized'
-            })
-        }
-
-        const verify: UserToken | null = verifyRefreshToken(refreshToken)
-
-        if (verify === null) {
-            return res.status(401).json({
-                status: 401,
-                message: 'Unauthorized'
-            })
-        }
-
-        const data: UserToken = { ...verify }
-
-        const newAccessToken: string = generateAccessToken(data)
-
-        return res.status(200).json({
-            status: 200,
-            message: 'OK',
-            data: { ...data, accessToken: newAccessToken }
         })
     } catch (err: any) {
         return res.status(500).json({

@@ -2,6 +2,7 @@ import { type Request, type Response } from 'express'
 
 import prisma from '../database/prisma/prisma'
 import { Roles, AddRoles } from '../database/types/roles'
+import { formatterDate } from '../utils/date'
 
 export const add = async (req: Request, res: Response): Promise<Response> => {
     const { ...body } = req.body
@@ -32,10 +33,19 @@ export const getAll = async (req: Request, res: Response): Promise<Response> => 
     try {
         const roles: Roles[] = await prisma.roles.findMany()
 
+        const data: object[] = roles.map((role) => {
+            return {
+                id: role.id,
+                name: role.name,
+                createdAt: formatterDate(new Date(role.createdAt)),
+                updatedAt: formatterDate(new Date(role.updatedAt))
+            }
+        })
+
         return res.status(200).json({
             status: 200,
             message: 'OK',
-            data: roles
+            data: data
         })
     } catch (err: any) {
         return res.status(500).json({

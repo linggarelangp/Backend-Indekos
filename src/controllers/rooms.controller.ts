@@ -4,10 +4,14 @@ import { type Request, type Response } from 'express'
 
 import prisma from '../database/prisma/prisma'
 import { AddRooms, Rooms } from '../database/types/rooms'
+import { formatterDate } from '../utils/date'
 
 export const add = async (req: Request, res: Response): Promise<any> => {
     const { ...body } = req.body
     const { ...file } = req.file
+
+    console.log(body)
+
 
     try {
         if (!req.file) {
@@ -19,10 +23,11 @@ export const add = async (req: Request, res: Response): Promise<any> => {
 
         const data: AddRooms = {
             name: body.name,
-            amount: Number(body.amount) ?? 20,
-            image: file.filename,
             createdAt: new Date(new Date().toISOString()),
-            updatedAt: new Date(new Date().toISOString())
+            updatedAt: new Date(new Date().toISOString()),
+            amount: Number(body.amount) ?? 20,
+            price: Number(body.price),
+            image: file.filename
         }
 
         const room: Rooms = await prisma.rooms.create({ data })
@@ -45,12 +50,9 @@ export const getAll = async (req: Request, res: Response): Promise<Response> => 
     try {
         const imageUrl: string = path.join(process.cwd(), 'src/assets/img/')
 
-        console.log(imageUrl);
-
-
         const room: Rooms[] = await prisma.rooms.findMany()
 
-        const data: (Rooms | undefined)[] = room.map((room) => {
+        const data: (object | undefined)[] = room.map((room) => {
             const imagePath = path.join(imageUrl, room.image)
             if (fs.existsSync(imagePath)) {
 
@@ -59,10 +61,11 @@ export const getAll = async (req: Request, res: Response): Promise<Response> => 
                 return {
                     id: room.id,
                     name: room.name,
-                    amount: room.amount,
                     image: image,
-                    createdAt: room.createdAt,
-                    updatedAt: room.updatedAt,
+                    amount: room.amount,
+                    price: room.price,
+                    createdAt: formatterDate(new Date(room.createdAt)),
+                    updatedAt: formatterDate(new Date(room.updatedAt))
                 }
             }
         })
@@ -103,8 +106,9 @@ export const getById = async (req: Request, res: Response): Promise<Response> =>
         const data: object = {
             id: room.id,
             name: room.name,
-            amount: room.amount,
             image: image,
+            amount: room.amount,
+            price: room.price,
             createdAt: room.createdAt,
             updatedAt: room.updatedAt
         }
@@ -125,6 +129,7 @@ export const getById = async (req: Request, res: Response): Promise<Response> =>
 export const update = async (req: Request, res: Response): Promise<Response> => {
     const id: string = req.params.id
     const { ...body } = req.body
+    const { ...file } = req.file
 
     try {
         const roomId: number = Number(id)
@@ -138,15 +143,24 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
             })
         }
 
+        console.log(body);
+
+
         const data: object = {
-            name: body.room,
-            amount: body.room,
+            name: body.name,
+            image: file.filename,
+            amount: Number(body.amount),
+            price: Number(body.price),
             updatedAt: new Date(new Date().toISOString())
         }
 
-        // const data: object = { name: body.name, amount: body.amount, image: 'images.jpg',updatedAt: new Date(new Date().toISOString()) }
-
         const update: Rooms = await prisma.rooms.update({ where: { id: room.id }, data: data })
+
+        const imagePath: string = path.join(process.cwd(), 'src/assets/img/', room.image)
+
+        if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath)
+        }
 
         return res.status(200).json({
             status: 200,

@@ -1,5 +1,5 @@
 import { type NextFunction, type Request, type Response } from 'express'
-import { UserToken } from '../database/types/users'
+import { VerifyUserToken } from '../database/types/users'
 import { verifyAccessToken } from '../utils/token'
 
 
@@ -23,7 +23,7 @@ export const authentication = (req: Request, res: Response, next: NextFunction):
             })
         }
 
-        const response: UserToken | null = verifyAccessToken(token)
+        const response: VerifyUserToken | null = verifyAccessToken(token)
 
         if (response === null) {
             return res.status(401).json({

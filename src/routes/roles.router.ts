@@ -1,5 +1,5 @@
 import express, { type Router } from 'express'
-import { add, deleted, getAll, getById, update } from '../controllers/role.controller'
+import { add, deleted, getAll, getById, update } from '../controllers/roles.controller'
 import { roleValidation } from '../middleware/validation'
 
 const roles: Router = express.Router()

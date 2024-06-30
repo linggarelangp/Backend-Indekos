@@ -7,14 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model RoomFacilities {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(20)
-  createdAt DateTime @db.Timestamp(0)
-  updatedAt DateTime @db.Timestamp(0)
+// model RoomFacilities {
+//   id        Int      @id @default(autoincrement())
+//   name      String   @db.VarChar(20)
+//   createdAt DateTime @db.Timestamp(0)
+//   updatedAt DateTime @db.Timestamp(0)
 
-  @@map("room_facilities")
-}
+//   @@map("room_facilities")
+// }
 
 model roles {
   id        Int      @id @default(autoincrement())
@@ -23,36 +23,51 @@ model roles {
   updatedAt DateTime @db.Timestamp(0)
 }
 
-model roomdetails {
-  id              Int      @id @default(autoincrement())
-  roomId          Int
-  facilitiyRoomId Int
-  createdAt       DateTime @db.Timestamp(0)
-  updatedAt       DateTime @db.Timestamp(0)
-}
+// model roomdetails {
+//   id              Int      @id @default(autoincrement())
+//   roomId          Int
+//   facilitiyRoomId Int
+//   createdAt       DateTime @db.Timestamp(0)
+//   updatedAt       DateTime @db.Timestamp(0)
+// }
 
 model rooms {
   id        Int      @id @default(autoincrement())
   name      String   @db.VarChar(20)
-  amount    Int
   image     String   @db.Text
+  amount    Int
+  price     Int
+  createdAt DateTime @db.Timestamp(0)
+  updatedAt DateTime @db.Timestamp(0)
+}
+
+model residents {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String   @db.VarChar(50)
+  email     String   @db.VarChar(80)
+  roomId    Int
+  roomName  String   @db.VarChar(20)
+  amount    Int
+  price     Int
+  status    Boolean
   createdAt DateTime @db.Timestamp(0)
   updatedAt DateTime @db.Timestamp(0)
 }
 
 model transactions {
-  id        Int      @id @default(autoincrement())
-  trxId     String   @unique(map: "Transactions_trxId_key")
-  userId    Int
-  roomId    Int
-  name      String   @db.VarChar(50)
-  email     String   @unique(map: "Transactions_email_key") @db.VarChar(50)
-  status    Boolean
-  roomName  String   @db.VarChar(20)
-  amount    Int
-  price     Int
-  createdAt DateTime @db.Timestamp(0)
-  updatedAt DateTime @db.Timestamp(0)
+  id            Int      @id @default(autoincrement())
+  transactionId String   @unique(map: "Transactions_trxId_key")
+  userId        Int
+  roomId        Int
+  name          String   @db.VarChar(50)
+  email         String   @db.VarChar(80)
+  status        Boolean
+  roomName      String   @db.VarChar(20)
+  amount        Int
+  price         Int
+  createdAt     DateTime @db.Timestamp(0)
+  updatedAt     DateTime @db.Timestamp(0)
 }
 
 model users {

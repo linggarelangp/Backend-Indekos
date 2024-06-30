@@ -24,6 +24,7 @@ export interface AddUser {
 }
 
 export interface GetUser {
+    id: number
     roleId: number
     email: string
     name: string
@@ -34,9 +35,15 @@ export interface GetUser {
 
 export interface UserToken {
     id: number
+    roleId: number
     name: string
     email: string
     status: boolean
     createdAt: Date
     updatedAt: Date
+}
+
+export interface VerifyUserToken extends UserToken {
+    iat: number | null
+    exp: number | null
 }
